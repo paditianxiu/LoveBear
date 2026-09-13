@@ -1,7 +1,10 @@
 #include <jni.h>
 #include <android/log.h>
 #include <dlfcn.h>
+#include <cstring>
+#include <cmath>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <link.h>
@@ -39,90 +42,48 @@ namespace {
         return result;
     }
 
-    void InvokeVoid(UnityResolve::Method *method, void *instance, const jint *args, jsize count) {
-        if (method == nullptr || count > 4) return;
-        if (instance != nullptr) {
-            switch (count) {
-                case 0:
-                    method->Invoke<void>(instance);
-                    break;
-                case 1:
-                    method->Invoke<void>(instance, args[0]);
-                    break;
-                case 2:
-                    method->Invoke<void>(instance, args[0], args[1]);
-                    break;
-                case 3:
-                    method->Invoke<void>(instance, args[0], args[1], args[2]);
-                    break;
-                case 4:
-                    method->Invoke<void>(instance, args[0], args[1], args[2], args[3]);
-                    break;
-            }
-        } else {
-            switch (count) {
-                case 0:
-                    method->Invoke<void>();
-                    break;
-                case 1:
-                    method->Invoke<void>(args[0]);
-                    break;
-                case 2:
-                    method->Invoke<void>(args[0], args[1]);
-                    break;
-                case 3:
-                    method->Invoke<void>(args[0], args[1], args[2]);
-                    break;
-                case 4:
-                    method->Invoke<void>(args[0], args[1], args[2], args[3]);
-                    break;
-            }
-        }
-    }
+    union RuntimeValue {
+        std::uint64_t u64;
+        double d;
+        float f;
+        void *object;
+    };
 
-
-    void InvokeVoidObjects(UnityResolve::Method *method, void *instance, const jlong *args,
-                           jsize count) {
-        if (method == nullptr || count > 4) return;
-        void *values[4] = {};
-        for (jsize i = 0; i < count; ++i) values[i] = reinterpret_cast<void *>(args[i]);
-        if (instance != nullptr) {
-            switch (count) {
-                case 0:
-                    method->Invoke<void>(instance);
-                    break;
-                case 1:
-                    method->Invoke<void>(instance, values[0]);
-                    break;
-                case 2:
-                    method->Invoke<void>(instance, values[0], values[1]);
-                    break;
-                case 3:
-                    method->Invoke<void>(instance, values[0], values[1], values[2]);
-                    break;
-                case 4:
-                    method->Invoke<void>(instance, values[0], values[1], values[2], values[3]);
-                    break;
-            }
-        } else {
-            switch (count) {
-                case 0:
-                    method->Invoke<void>();
-                    break;
-                case 1:
-                    method->Invoke<void>(values[0]);
-                    break;
-                case 2:
-                    method->Invoke<void>(values[0], values[1]);
-                    break;
-                case 3:
-                    method->Invoke<void>(values[0], values[1], values[2]);
-                    break;
-                case 4:
-                    method->Invoke<void>(values[0], values[1], values[2], values[3]);
-                    break;
-            }
+    void *InvokeRuntime(UnityResolve::Method *method, void *instance, const jlong *args,
+                        jsize count) {
+        if (method == nullptr || count < 0 ||
+            static_cast<size_t>(count) != method->args.size()) {
+            return nullptr;
         }
+
+        std::vector<RuntimeValue> values(static_cast<size_t>(count));
+        std::vector<void *> argumentPointers(static_cast<size_t>(count));
+        for (jsize i = 0; i < count; ++i) {
+            const auto *argument = method->args[static_cast<size_t>(i)];
+            if (argument == nullptr || argument->pType == nullptr) return nullptr;
+            const auto &type = argument->pType->name;
+            values[static_cast<size_t>(i)].u64 = static_cast<std::uint64_t>(args[i]);
+
+            if (type == "System.Single") {
+                std::uint32_t bits = static_cast<std::uint32_t>(args[i]);
+                std::memcpy(&values[static_cast<size_t>(i)].f, &bits, sizeof(bits));
+            } else if (type == "System.Double") {
+                std::memcpy(&values[static_cast<size_t>(i)].d, &args[i], sizeof(args[i]));
+            } else if (type != "System.Boolean" && type != "System.Byte" &&
+                       type != "System.SByte" && type != "System.Int16" &&
+                       type != "System.UInt16" && type != "System.Int32" &&
+                       type != "System.UInt32" && type != "System.Int64" &&
+                       type != "System.UInt64" && type != "System.IntPtr" &&
+                       type != "System.UIntPtr") {
+                values[static_cast<size_t>(i)].object = reinterpret_cast<void *>(args[i]);
+            }
+            argumentPointers[static_cast<size_t>(i)] = &values[static_cast<size_t>(i)];
+        }
+
+        void *exception = nullptr;
+        return UnityResolve::Invoke<void *>("il2cpp_runtime_invoke", method->address, instance,
+                                            argumentPointers.empty() ? nullptr : argumentPointers.data(),
+                                            &exception);
     }
 
     jobject Box(JNIEnv *env, const char *className, const char *methodName, const char *signature,
@@ -139,6 +100,22 @@ namespace {
     const std::string &FieldType(UnityResolve::Field *field) {
         static const std::string empty;
         return field != nullptr && field->type != nullptr ? field->type->name : empty;
+    }
+
+    std::string JsonEscape(const std::string &value) {
+        std::string escaped;
+        escaped.reserve(value.size() + 8);
+        for (const char character : value) {
+            switch (character) {
+                case '\\': escaped += "\\\\"; break;
+                case '"': escaped += "\\\""; break;
+                case '\n': escaped += "\\n"; break;
+                case '\r': escaped += "\\r"; break;
+                case '\t': escaped += "\\t"; break;
+                default: escaped += character; break;
+            }
+        }
+        return escaped;
     }
 
     jobject
@@ -417,12 +394,15 @@ Java_io_github_libxposed_lovebear_NativeFunctions_invokeVoid(
         JNIEnv *env, jobject, jlong methodHandle, jlong instanceHandle, jintArray arguments) {
     if (!gInitialized || methodHandle == 0) return;
     const jsize count = arguments == nullptr ? 0 : env->GetArrayLength(arguments);
-    if (count > 4) return;
-    jint values[4] = {};
-    if (count > 0) env->GetIntArrayRegion(arguments, 0, count, values);
+    std::vector<jlong> values(static_cast<size_t>(count));
+    if (count > 0) {
+        std::vector<jint> intValues(static_cast<size_t>(count));
+        env->GetIntArrayRegion(arguments, 0, count, intValues.data());
+        for (jsize i = 0; i < count; ++i) values[static_cast<size_t>(i)] = intValues[i];
+    }
     UnityResolve::ThreadAttach();
-    InvokeVoid(reinterpret_cast<UnityResolve::Method *>(methodHandle),
-               reinterpret_cast<void *>(instanceHandle), values, count);
+    InvokeRuntime(reinterpret_cast<UnityResolve::Method *>(methodHandle),
+                  reinterpret_cast<void *>(instanceHandle), values.data(), count);
 }
 
 
@@ -431,12 +411,24 @@ Java_io_github_libxposed_lovebear_NativeFunctions_invokeVoidObjects(
         JNIEnv *env, jobject, jlong methodHandle, jlong instanceHandle, jlongArray arguments) {
     if (!gInitialized || methodHandle == 0) return;
     const jsize count = arguments == nullptr ? 0 : env->GetArrayLength(arguments);
-    if (count > 4) return;
-    jlong values[4] = {};
-    if (count > 0) env->GetLongArrayRegion(arguments, 0, count, values);
+    std::vector<jlong> values(static_cast<size_t>(count));
+    if (count > 0) env->GetLongArrayRegion(arguments, 0, count, values.data());
     UnityResolve::ThreadAttach();
-    InvokeVoidObjects(reinterpret_cast<UnityResolve::Method *>(methodHandle),
-                      reinterpret_cast<void *>(instanceHandle), values, count);
+    InvokeRuntime(reinterpret_cast<UnityResolve::Method *>(methodHandle),
+                  reinterpret_cast<void *>(instanceHandle), values.data(), count);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_invoke(
+        JNIEnv *env, jobject, jlong methodHandle, jlong instanceHandle, jlongArray arguments) {
+    if (!gInitialized || methodHandle == 0) return 0;
+    const jsize count = arguments == nullptr ? 0 : env->GetArrayLength(arguments);
+    std::vector<jlong> values(static_cast<size_t>(count));
+    if (count > 0) env->GetLongArrayRegion(arguments, 0, count, values.data());
+    UnityResolve::ThreadAttach();
+    void *result = InvokeRuntime(reinterpret_cast<UnityResolve::Method *>(methodHandle),
+                                 reinterpret_cast<void *>(instanceHandle), values.data(), count);
+    return reinterpret_cast<jlong>(result);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -445,4 +437,64 @@ Java_io_github_libxposed_lovebear_NativeFunctions_newString(JNIEnv *env, jobject
     UnityResolve::ThreadAttach();
     auto *string = UnityResolve::UnityType::String::New(ToString(env, value));
     return reinterpret_cast<jlong>(string);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getEntitySnapshot(JNIEnv *env, jobject) {
+    if (!gInitialized) return env->NewStringUTF("{\"width\":0,\"height\":0,\"entities\":[]}");
+
+    UnityResolve::ThreadAttach();
+    auto *camera = UnityResolve::UnityType::Camera::GetMain();
+    const auto width = UnityResolve::UnityType::Screen::get_width();
+    const auto height = UnityResolve::UnityType::Screen::get_height();
+    std::ostringstream json;
+    json << "{\"width\":" << width << ",\"height\":" << height << ",\"entities\":[";
+
+    bool first = true;
+    if (camera != nullptr && width > 0 && height > 0) {
+        auto *core = UnityResolve::Get("UnityEngine.CoreModule.dll");
+        auto *monoClass = core != nullptr ? core->Get("MonoBehaviour", "UnityEngine") : nullptr;
+        if (monoClass == nullptr && core != nullptr) monoClass = core->Get("MonoBehaviour");
+        if (monoClass != nullptr) {
+            const auto objects = monoClass->FindObjectsByType<UnityResolve::UnityType::MonoBehaviour *>();
+            for (auto *object : objects) {
+                if (object == nullptr || object->GetGameObject() == nullptr ||
+                    !object->GetGameObject()->GetActiveInHierarchy()) continue;
+                auto *transform = object->GetTransform();
+                if (transform == nullptr) continue;
+                const auto screen = camera->WorldToScreenPoint(transform->GetPosition());
+                if (!std::isfinite(screen.x) || !std::isfinite(screen.y) ||
+                    !std::isfinite(screen.z) || screen.z <= 0.0f ||
+                    screen.x < 0.0f || screen.x > static_cast<float>(width) ||
+                    screen.y < 0.0f || screen.y > static_cast<float>(height)) continue;
+
+                // Do not call System.Type methods here: some IL2CPP builds expose
+                // metadata-only MethodInfo entries whose function slot is not executable.
+                std::string type = "UnityEngine.MonoBehaviour";
+                const auto klass = object->Il2CppClass.klass;
+                if (klass != nullptr) {
+                    const auto className = UnityResolve::Invoke<const char *>(
+                            "il2cpp_class_get_name", klass);
+                    const auto namespaceName = UnityResolve::Invoke<const char *>(
+                            "il2cpp_class_get_namespace", klass);
+                    if (className != nullptr && className[0] != '\0') {
+                        type = (namespaceName != nullptr && namespaceName[0] != '\0')
+                               ? std::string(namespaceName) + "." + className
+                               : className;
+                    }
+                }
+                const std::string &name = type;
+
+                if (!first) json << ',';
+                first = false;
+                json << "{\"type\":\"" << JsonEscape(type)
+                     << "\",\"name\":\"" << JsonEscape(name)
+                     << "\",\"x\":" << screen.x
+                     << ",\"y\":" << screen.y
+                     << ",\"z\":" << screen.z << '}';
+            }
+        }
+    }
+    json << "]}";
+    return env->NewStringUTF(json.str().c_str());
 }

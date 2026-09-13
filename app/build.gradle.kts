@@ -9,7 +9,7 @@ android {
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 33
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -81,4 +81,7 @@ dependencies {
     implementation("top.yukonga.miuix.kmp:miuix-icons-android:$miuix")
     // Optional: Add miuix-squircle for squircle (smooth rounded corner) shapes
     implementation("top.yukonga.miuix.kmp:miuix-squircle-android:$miuix")
+
+    implementation("top.yukonga.miuix.kmp:miuix-blur-android:$miuix")
+
 }

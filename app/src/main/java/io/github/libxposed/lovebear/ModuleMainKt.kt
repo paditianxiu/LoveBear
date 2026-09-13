@@ -37,6 +37,7 @@ class ModuleMainKt : XposedModule() {
 
 
             val ctx: Activity = chain.thisObject as? Activity ?: return@intercept result
+            EntityOverlayController.attach(ctx)
             val floatingRoot = FrameLayout(ctx)
 
 

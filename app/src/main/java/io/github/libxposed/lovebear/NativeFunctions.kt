@@ -30,5 +30,11 @@ object NativeFunctions {
 
     external fun invokeVoidObjects(method: Long, instance: Long = 0, arguments: LongArray = longArrayOf())
 
+    /** Calls any managed method and returns its IL2CPP object/boxed result handle. */
+    external fun invoke(method: Long, instance: Long = 0, arguments: LongArray = longArrayOf()): Long
+
     external fun newString(value: String): Long
+
+    /** Returns active MonoBehaviour instances as a JSON snapshot. */
+    external fun getEntitySnapshot(): String
 }
