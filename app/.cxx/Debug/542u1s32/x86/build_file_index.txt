@@ -1,0 +1,3 @@
+/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/CMakeLists.txt
+/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/CMakeLists.txt
+/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby/CMakeLists.txt

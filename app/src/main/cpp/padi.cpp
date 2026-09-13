@@ -1,0 +1,448 @@
+#include <jni.h>
+#include <android/log.h>
+#include <dlfcn.h>
+#include <mutex>
+#include <string>
+#include <vector>
+#include <link.h>
+
+#include "libs/xdl/xdl.h"
+
+namespace {
+    void *gIl2CppXdlHandle = nullptr;
+
+    void *ResolveIl2CppSymbol(void *, const char *symbol) {
+        if (gIl2CppXdlHandle == nullptr || symbol == nullptr) return nullptr;
+        void *address = xdl_sym(gIl2CppXdlHandle, symbol, nullptr);
+        if (address == nullptr) address = xdl_dsym(gIl2CppXdlHandle, symbol, nullptr);
+        return address;
+    }
+}
+
+#define dlsym ResolveIl2CppSymbol
+
+#include "UnityResolve.hpp"
+
+#undef dlsym
+
+#include "libs/KittyMemory/KittyMemory.h"
+
+namespace {
+    constexpr const char *kTag = "LoveBearNative";
+    bool gInitialized = false;
+
+    std::string ToString(JNIEnv *env, jstring value) {
+        if (value == nullptr) return {};
+        const char *chars = env->GetStringUTFChars(value, nullptr);
+        std::string result = chars != nullptr ? chars : "";
+        if (chars != nullptr) env->ReleaseStringUTFChars(value, chars);
+        return result;
+    }
+
+    void InvokeVoid(UnityResolve::Method *method, void *instance, const jint *args, jsize count) {
+        if (method == nullptr || count > 4) return;
+        if (instance != nullptr) {
+            switch (count) {
+                case 0:
+                    method->Invoke<void>(instance);
+                    break;
+                case 1:
+                    method->Invoke<void>(instance, args[0]);
+                    break;
+                case 2:
+                    method->Invoke<void>(instance, args[0], args[1]);
+                    break;
+                case 3:
+                    method->Invoke<void>(instance, args[0], args[1], args[2]);
+                    break;
+                case 4:
+                    method->Invoke<void>(instance, args[0], args[1], args[2], args[3]);
+                    break;
+            }
+        } else {
+            switch (count) {
+                case 0:
+                    method->Invoke<void>();
+                    break;
+                case 1:
+                    method->Invoke<void>(args[0]);
+                    break;
+                case 2:
+                    method->Invoke<void>(args[0], args[1]);
+                    break;
+                case 3:
+                    method->Invoke<void>(args[0], args[1], args[2]);
+                    break;
+                case 4:
+                    method->Invoke<void>(args[0], args[1], args[2], args[3]);
+                    break;
+            }
+        }
+    }
+
+
+    void InvokeVoidObjects(UnityResolve::Method *method, void *instance, const jlong *args,
+                           jsize count) {
+        if (method == nullptr || count > 4) return;
+        void *values[4] = {};
+        for (jsize i = 0; i < count; ++i) values[i] = reinterpret_cast<void *>(args[i]);
+        if (instance != nullptr) {
+            switch (count) {
+                case 0:
+                    method->Invoke<void>(instance);
+                    break;
+                case 1:
+                    method->Invoke<void>(instance, values[0]);
+                    break;
+                case 2:
+                    method->Invoke<void>(instance, values[0], values[1]);
+                    break;
+                case 3:
+                    method->Invoke<void>(instance, values[0], values[1], values[2]);
+                    break;
+                case 4:
+                    method->Invoke<void>(instance, values[0], values[1], values[2], values[3]);
+                    break;
+            }
+        } else {
+            switch (count) {
+                case 0:
+                    method->Invoke<void>();
+                    break;
+                case 1:
+                    method->Invoke<void>(values[0]);
+                    break;
+                case 2:
+                    method->Invoke<void>(values[0], values[1]);
+                    break;
+                case 3:
+                    method->Invoke<void>(values[0], values[1], values[2]);
+                    break;
+                case 4:
+                    method->Invoke<void>(values[0], values[1], values[2], values[3]);
+                    break;
+            }
+        }
+    }
+
+    jobject Box(JNIEnv *env, const char *className, const char *methodName, const char *signature,
+                jvalue value) {
+        jclass clazz = env->FindClass(className);
+        if (clazz == nullptr) return nullptr;
+        jmethodID method = env->GetStaticMethodID(clazz, methodName, signature);
+        jobject result =
+                method != nullptr ? env->CallStaticObjectMethodA(clazz, method, &value) : nullptr;
+        env->DeleteLocalRef(clazz);
+        return result;
+    }
+
+    const std::string &FieldType(UnityResolve::Field *field) {
+        static const std::string empty;
+        return field != nullptr && field->type != nullptr ? field->type->name : empty;
+    }
+
+    jobject
+    ReadField(JNIEnv *env, UnityResolve::Class *clazz, void *instance, UnityResolve::Field *field) {
+        if (field == nullptr || field->offset < 0) return nullptr;
+        const auto &type = FieldType(field);
+        const auto offset = static_cast<unsigned int>(field->offset);
+        if (type == "System.Boolean") {
+            jvalue value{};
+            value.z = clazz->GetValue<bool>(instance, offset);
+            return Box(env, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", value);
+        }
+        if (type == "System.Byte" || type == "System.SByte" || type == "System.Int16" ||
+            type == "System.UInt16" || type == "System.Int32" || type == "System.UInt32") {
+            jvalue value{};
+            value.i = clazz->GetValue<jint>(instance, offset);
+            return Box(env, "java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", value);
+        }
+        if (type == "System.Int64" || type == "System.UInt64") {
+            jvalue value{};
+            value.j = clazz->GetValue<jlong>(instance, offset);
+            return Box(env, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", value);
+        }
+        if (type == "System.Single") {
+            jvalue value{};
+            value.f = clazz->GetValue<float>(instance, offset);
+            return Box(env, "java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", value);
+        }
+        if (type == "System.Double") {
+            jvalue value{};
+            value.d = clazz->GetValue<double>(instance, offset);
+            return Box(env, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", value);
+        }
+        if (type == "System.String") {
+            auto *value = clazz->GetValue<UnityResolve::UnityType::String *>(instance, offset);
+            if (value == nullptr) return nullptr;
+            return env->NewStringUTF(value->ToString().c_str());
+        }
+        jvalue value{};
+        value.j = reinterpret_cast<jlong>(clazz->GetValue<void *>(instance, offset));
+        return Box(env, "java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", value);
+    }
+
+    bool WriteField(JNIEnv *env, UnityResolve::Class *clazz, void *instance,
+                    UnityResolve::Field *field, jobject value) {
+        if (field == nullptr || field->offset < 0 || value == nullptr) return false;
+        const auto &type = FieldType(field);
+        const auto offset = static_cast<unsigned int>(field->offset);
+        if (type == "System.String") {
+            auto *string = UnityResolve::UnityType::String::New(
+                    ToString(env, static_cast<jstring>(value)));
+            clazz->SetValue<UnityResolve::UnityType::String *>(instance, offset, string);
+            return true;
+        }
+        if (type == "System.Boolean") {
+            jclass clazzBoolean = env->FindClass("java/lang/Boolean");
+            jmethodID method = env->GetMethodID(clazzBoolean, "booleanValue", "()Z");
+            clazz->SetValue<bool>(instance, offset, env->CallBooleanMethod(value, method));
+            env->DeleteLocalRef(clazzBoolean);
+            return true;
+        }
+        if (type == "System.Single") {
+            jclass valueClass = env->FindClass("java/lang/Number");
+            jmethodID method = env->GetMethodID(valueClass, "floatValue", "()F");
+            clazz->SetValue<float>(instance, offset, env->CallFloatMethod(value, method));
+            env->DeleteLocalRef(valueClass);
+            return true;
+        }
+        if (type == "System.Double") {
+            jclass valueClass = env->FindClass("java/lang/Number");
+            jmethodID method = env->GetMethodID(valueClass, "doubleValue", "()D");
+            clazz->SetValue<double>(instance, offset, env->CallDoubleMethod(value, method));
+            env->DeleteLocalRef(valueClass);
+            return true;
+        }
+        if (type == "System.Int64" || type == "System.UInt64") {
+            jclass valueClass = env->FindClass("java/lang/Number");
+            jmethodID method = env->GetMethodID(valueClass, "longValue", "()J");
+            clazz->SetValue<jlong>(instance, offset, env->CallLongMethod(value, method));
+            env->DeleteLocalRef(valueClass);
+            return true;
+        }
+        if (type == "System.Byte" || type == "System.SByte" || type == "System.Int16" ||
+            type == "System.UInt16" || type == "System.Int32" || type == "System.UInt32") {
+            jclass valueClass = env->FindClass("java/lang/Number");
+            jmethodID method = env->GetMethodID(valueClass, "intValue", "()I");
+            clazz->SetValue<jint>(instance, offset, env->CallIntMethod(value, method));
+            env->DeleteLocalRef(valueClass);
+            return true;
+        }
+        if (env->IsInstanceOf(value, env->FindClass("java/lang/Number"))) {
+            auto object = reinterpret_cast<void *>(env->CallLongMethod(value,
+                                                                       env->GetMethodID(
+                                                                               env->FindClass(
+                                                                                       "java/lang/Number"),
+                                                                               "longValue",
+                                                                               "()J")));
+            clazz->SetValue<void *>(instance, offset, object);
+            return true;
+        }
+        return false;
+    }
+}
+
+uintptr_t get_base_address(const char *name) {
+    return KittyMemory::getAbsoluteAddress(name, 0);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_initUnityResolve(JNIEnv *, jobject) {
+    if (gInitialized) return JNI_TRUE;
+
+    const auto libraryMap = KittyMemory::getLibraryMap("libil2cpp.so");
+    const uintptr_t base = reinterpret_cast<uintptr_t>(libraryMap.startAddr);
+    __android_log_print(ANDROID_LOG_INFO, kTag, "libil2cpp base = 0x%llx",
+                        static_cast<unsigned long long>(base));
+
+    if (base == 0 || libraryMap.pathname.empty()) {
+        __android_log_write(ANDROID_LOG_WARN, kTag, "libil2cpp.so is not loaded");
+        return JNI_FALSE;
+    }
+
+    __android_log_print(ANDROID_LOG_INFO, kTag, "libil2cpp path = %s",
+                        libraryMap.pathname.c_str());
+
+    gIl2CppXdlHandle = xdl_open(libraryMap.pathname.c_str(), XDL_DEFAULT);
+    if (gIl2CppXdlHandle == nullptr) {
+        __android_log_write(ANDROID_LOG_WARN, kTag,
+                            "xdl_open failed for the loaded libil2cpp.so");
+        return JNI_FALSE;
+    }
+    void *domainGet = ResolveIl2CppSymbol(gIl2CppXdlHandle, "il2cpp_domain_get");
+    if (domainGet == nullptr) {
+        __android_log_write(ANDROID_LOG_WARN, kTag,
+                            "il2cpp_domain_get was not found in libil2cpp ELF symbols");
+        xdl_close(gIl2CppXdlHandle);
+        gIl2CppXdlHandle = nullptr;
+        return JNI_FALSE;
+    }
+    __android_log_print(ANDROID_LOG_INFO, kTag, "il2cpp_domain_get = %p", domainGet);
+
+    gInitialized = UnityResolve::Init(RTLD_DEFAULT, UnityResolve::Mode::Il2Cpp);
+    if (!gInitialized) {
+        __android_log_write(ANDROID_LOG_WARN, kTag, "Unity runtime is not ready yet");
+        return JNI_FALSE;
+    }
+    __android_log_write(ANDROID_LOG_INFO, kTag, "UnityResolve initialized in Il2Cpp mode");
+    return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_threadAttach(JNIEnv *, jobject) {
+    if (gInitialized) UnityResolve::ThreadAttach();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_threadDetach(JNIEnv *, jobject) {
+    // UnityResolve::ThreadDetach passes the domain to il2cpp_thread_detach,
+    // which expects the Il2CppThread returned by il2cpp_thread_attach.
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_findAssembly(JNIEnv *env, jobject, jstring name) {
+    if (!gInitialized) return 0;
+    UnityResolve::ThreadAttach();
+    auto *assembly = UnityResolve::Get(ToString(env, name));
+    return reinterpret_cast<jlong>(assembly);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_findClass(
+        JNIEnv *env, jobject, jlong assemblyHandle, jstring name, jstring namespaceName) {
+    if (!gInitialized || assemblyHandle == 0) return 0;
+    UnityResolve::ThreadAttach();
+    auto *assembly = reinterpret_cast<UnityResolve::Assembly *>(assemblyHandle);
+    auto *clazz = assembly->Get(ToString(env, name), ToString(env, namespaceName));
+    return reinterpret_cast<jlong>(clazz);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getFieldOffset(
+        JNIEnv *env, jobject, jlong classHandle, jstring name) {
+    if (!gInitialized || classHandle == 0) return -1;
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *field = clazz->Get<UnityResolve::Field>(ToString(env, name));
+    const jint offset = field != nullptr ? field->offset : -1;
+    return offset;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getObjectField(
+        JNIEnv *env, jobject, jlong instanceHandle, jlong classHandle, jstring name) {
+    if (!gInitialized || instanceHandle == 0 || classHandle == 0) return 0;
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *field = clazz->Get<UnityResolve::Field>(ToString(env, name));
+    void *value = nullptr;
+    if (field != nullptr && field->offset >= 0) {
+        value = clazz->GetValue<void *>(reinterpret_cast<void *>(instanceHandle),
+                                        static_cast<unsigned int>(field->offset));
+    }
+    return reinterpret_cast<jlong>(value);
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getFieldValue(
+        JNIEnv *env, jobject, jlong instanceHandle, jlong classHandle, jstring name) {
+    if (!gInitialized || instanceHandle == 0 || classHandle == 0) return nullptr;
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *field = clazz->Get<UnityResolve::Field>(ToString(env, name));
+    jobject result = ReadField(env, clazz, reinterpret_cast<void *>(instanceHandle), field);
+    return result;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_setFieldValue(
+        JNIEnv *env, jobject, jlong instanceHandle, jlong classHandle, jstring name,
+        jobject value) {
+    if (!gInitialized || instanceHandle == 0 || classHandle == 0) return JNI_FALSE;
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *field = clazz->Get<UnityResolve::Field>(ToString(env, name));
+    const bool result = WriteField(env, clazz, reinterpret_cast<void *>(instanceHandle), field,
+                                   value);
+    return result ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getStaticObjectField(
+        JNIEnv *env, jobject, jlong classHandle, jstring name) {
+    if (!gInitialized || classHandle == 0) return 0;
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *field = clazz->Get<UnityResolve::Field>(ToString(env, name));
+    void *value = nullptr;
+    if (field != nullptr && field->static_field) field->GetStaticValue(&value);
+    return reinterpret_cast<jlong>(value);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_findMethod(
+        JNIEnv *env, jobject, jlong classHandle, jstring name, jobjectArray parameterTypes) {
+    if (!gInitialized || classHandle == 0) return 0;
+    std::vector<std::string> types;
+    if (parameterTypes != nullptr) {
+        const jsize count = env->GetArrayLength(parameterTypes);
+        types.reserve(count);
+        for (jsize i = 0; i < count; ++i) {
+            auto value = static_cast<jstring>(env->GetObjectArrayElement(parameterTypes, i));
+            types.push_back(ToString(env, value));
+            env->DeleteLocalRef(value);
+        }
+    }
+    UnityResolve::ThreadAttach();
+    auto *clazz = reinterpret_cast<UnityResolve::Class *>(classHandle);
+    auto *method = clazz->Get<UnityResolve::Method>(ToString(env, name), types);
+    return reinterpret_cast<jlong>(method);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_getMethodFunction(
+        JNIEnv *, jobject, jlong methodHandle) {
+    if (!gInitialized || methodHandle == 0) return 0;
+    UnityResolve::ThreadAttach();
+    auto *method = reinterpret_cast<UnityResolve::Method *>(methodHandle);
+    method->Compile();
+    const jlong function = reinterpret_cast<jlong>(method->function);
+    return function;
+}
+
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_invokeVoid(
+        JNIEnv *env, jobject, jlong methodHandle, jlong instanceHandle, jintArray arguments) {
+    if (!gInitialized || methodHandle == 0) return;
+    const jsize count = arguments == nullptr ? 0 : env->GetArrayLength(arguments);
+    if (count > 4) return;
+    jint values[4] = {};
+    if (count > 0) env->GetIntArrayRegion(arguments, 0, count, values);
+    UnityResolve::ThreadAttach();
+    InvokeVoid(reinterpret_cast<UnityResolve::Method *>(methodHandle),
+               reinterpret_cast<void *>(instanceHandle), values, count);
+}
+
+
+extern "C" JNIEXPORT void JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_invokeVoidObjects(
+        JNIEnv *env, jobject, jlong methodHandle, jlong instanceHandle, jlongArray arguments) {
+    if (!gInitialized || methodHandle == 0) return;
+    const jsize count = arguments == nullptr ? 0 : env->GetArrayLength(arguments);
+    if (count > 4) return;
+    jlong values[4] = {};
+    if (count > 0) env->GetLongArrayRegion(arguments, 0, count, values);
+    UnityResolve::ThreadAttach();
+    InvokeVoidObjects(reinterpret_cast<UnityResolve::Method *>(methodHandle),
+                      reinterpret_cast<void *>(instanceHandle), values, count);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_io_github_libxposed_lovebear_NativeFunctions_newString(JNIEnv *env, jobject, jstring value) {
+    if (!gInitialized) return 0;
+    UnityResolve::ThreadAttach();
+    auto *string = UnityResolve::UnityType::String::New(ToString(env, value));
+    return reinterpret_cast<jlong>(string);
+}

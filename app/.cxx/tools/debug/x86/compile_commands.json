@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpadi_EXPORTS -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++20 -o CMakeFiles/padi.dir/padi.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/padi.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/padi.cpp"
+},
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++20 -o libs/dobby/CMakeFiles/dobby.dir/dobby.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby/dobby.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby/dobby.cpp"
+},
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -fvisibility=hidden -std=gnu++20 -o libs/KittyMemory/CMakeFiles/KittyMemory.dir/KittyMemory.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/KittyMemory.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/KittyMemory.cpp"
+},
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -fvisibility=hidden -std=gnu++20 -o libs/KittyMemory/CMakeFiles/KittyMemory.dir/KittyUtils.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/KittyUtils.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/KittyUtils.cpp"
+},
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -fvisibility=hidden -std=gnu++20 -o libs/KittyMemory/CMakeFiles/KittyMemory.dir/MemoryBackup.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/MemoryBackup.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/MemoryBackup.cpp"
+},
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=i686-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -I/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -fvisibility=hidden -std=gnu++20 -o libs/KittyMemory/CMakeFiles/KittyMemory.dir/MemoryPatch.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/MemoryPatch.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/MemoryPatch.cpp"
+}
+]

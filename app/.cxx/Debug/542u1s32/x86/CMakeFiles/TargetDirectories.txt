@@ -1,0 +1,9 @@
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/CMakeFiles/padi.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/CMakeFiles/edit_cache.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/CMakeFiles/rebuild_cache.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/dobby/CMakeFiles/dobby.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/dobby/CMakeFiles/edit_cache.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/dobby/CMakeFiles/rebuild_cache.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/KittyMemory/CMakeFiles/KittyMemory.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/KittyMemory/CMakeFiles/edit_cache.dir
+/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/KittyMemory/CMakeFiles/rebuild_cache.dir

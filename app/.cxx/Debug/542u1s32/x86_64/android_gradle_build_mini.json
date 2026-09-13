@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "padi::@6890427a1f51a3e7e1df": {
+      "artifactName": "padi",
+      "abi": "x86_64",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/build/intermediates/cxx/Debug/542u1s32/obj/x86_64/libpadi.so",
+      "runtimeFiles": []
+    }
+  }
+}

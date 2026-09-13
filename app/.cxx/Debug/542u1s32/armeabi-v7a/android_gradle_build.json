@@ -1,0 +1,61 @@
+{
+  "buildFiles": [
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/CMakeLists.txt",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/CMakeLists.txt",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby/CMakeLists.txt",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/xdl/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "KittyMemory::@bb307f0ed0cdce7bb4cd": {
+      "toolchain": "toolchain",
+      "abi": "armeabi-v7a",
+      "artifactName": "KittyMemory",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/armeabi-v7a/libs/KittyMemory/libKittyMemory.a"
+    },
+    "dobby::@6deaca43f3b659f81389": {
+      "toolchain": "toolchain",
+      "abi": "armeabi-v7a",
+      "artifactName": "dobby",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/armeabi-v7a/libs/dobby/libdobby.a"
+    },
+    "padi::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "armeabi-v7a",
+      "artifactName": "padi",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/build/intermediates/cxx/Debug/542u1s32/obj/armeabi-v7a/libpadi.so",
+      "runtimeFiles": []
+    },
+    "xdl::@76dc5be9cdb279936949": {
+      "toolchain": "toolchain",
+      "abi": "armeabi-v7a",
+      "artifactName": "xdl",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/armeabi-v7a/libs/xdl/libxdl.a"
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [
+    "c"
+  ],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

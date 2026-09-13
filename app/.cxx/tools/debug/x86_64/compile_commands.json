@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86_64",
+  "command": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=x86_64-none-linux-android26 --sysroot=/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dpadi_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++20 -o CMakeFiles/padi.dir/padi.cpp.o -c /home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/padi.cpp",
+  "file": "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/padi.cpp"
+}
+]

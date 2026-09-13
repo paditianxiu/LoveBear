@@ -1,0 +1,52 @@
+{
+  "buildFiles": [
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/CMakeLists.txt",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/KittyMemory/CMakeLists.txt",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/src/main/cpp/libs/dobby/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/padi/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "KittyMemory::@bb307f0ed0cdce7bb4cd": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "KittyMemory",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/KittyMemory/libKittyMemory.a"
+    },
+    "dobby::@6deaca43f3b659f81389": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "dobby",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/.cxx/Debug/542u1s32/x86/libs/dobby/libdobby.a"
+    },
+    "padi::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "x86",
+      "artifactName": "padi",
+      "output": "/home/padi/AndroidStudioProjects/LoveBear/app/build/intermediates/cxx/Debug/542u1s32/obj/x86/libpadi.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/padi/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}
