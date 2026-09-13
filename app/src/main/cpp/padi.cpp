@@ -81,9 +81,15 @@ namespace {
         }
 
         void *exception = nullptr;
-        return UnityResolve::Invoke<void *>("il2cpp_runtime_invoke", method->address, instance,
-                                            argumentPointers.empty() ? nullptr : argumentPointers.data(),
-                                            &exception);
+        void *result = UnityResolve::Invoke<void *>(
+                "il2cpp_runtime_invoke", method->address, instance,
+                argumentPointers.empty() ? nullptr : argumentPointers.data(), &exception);
+        if (exception != nullptr) {
+            __android_log_print(ANDROID_LOG_WARN, kTag, "Managed method %s threw an exception",
+                                method->name.c_str());
+            return nullptr;
+        }
+        return result;
     }
 
     jobject Box(JNIEnv *env, const char *className, const char *methodName, const char *signature,
@@ -456,10 +462,31 @@ Java_io_github_libxposed_lovebear_NativeFunctions_getEntitySnapshot(JNIEnv *env,
         auto *monoClass = core != nullptr ? core->Get("MonoBehaviour", "UnityEngine") : nullptr;
         if (monoClass == nullptr && core != nullptr) monoClass = core->Get("MonoBehaviour");
         if (monoClass != nullptr) {
-            const auto objects = monoClass->FindObjectsByType<UnityResolve::UnityType::MonoBehaviour *>();
+            using MonoBehaviour = UnityResolve::UnityType::MonoBehaviour;
+            using MonoBehaviourArray = UnityResolve::UnityType::Array<MonoBehaviour *>;
+
+            std::vector<MonoBehaviour *> objects;
+            auto *objectClass = core->Get("Object", "UnityEngine");
+            if (objectClass == nullptr) objectClass = core->Get("Object");
+            auto *findObjects = objectClass != nullptr
+                                ? objectClass->Get<UnityResolve::Method>(
+                                        "FindObjectsOfType", {"System.Type"})
+                                : nullptr;
+            auto *monoType = monoClass->GetType();
+            if (findObjects != nullptr && monoType != nullptr) {
+                using FindObjectsFunction = MonoBehaviourArray *(*)(void *, void *);
+                auto function = reinterpret_cast<FindObjectsFunction>(findObjects->function);
+                auto *array = function != nullptr
+                              ? function(monoType, findObjects->address)
+                              : nullptr;
+                if (array != nullptr) objects = array->ToVector();
+            }
+
             for (auto *object : objects) {
-                if (object == nullptr || object->GetGameObject() == nullptr ||
-                    !object->GetGameObject()->GetActiveInHierarchy()) continue;
+                if (object == nullptr || object->m_CachedPtr == nullptr) continue;
+                auto *gameObject = object->GetGameObject();
+                if (gameObject == nullptr || gameObject->m_CachedPtr == nullptr ||
+                    !gameObject->GetActiveInHierarchy()) continue;
                 auto *transform = object->GetTransform();
                 if (transform == nullptr) continue;
                 const auto screen = camera->WorldToScreenPoint(transform->GetPosition());
