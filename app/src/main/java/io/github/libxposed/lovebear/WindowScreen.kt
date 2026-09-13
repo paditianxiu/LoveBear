@@ -121,6 +121,14 @@ fun MainWindow(onClose: () -> Unit) {
                 item {
                     var isChecked by remember { mutableStateOf(false) }
                     SwitchPreference(
+                        title = "正确路线", checked = isChecked, onCheckedChange = {
+                            isChecked = it
+                            EntityOverlayController.setCorrectRouteEnabled(it)
+                        })
+                }
+                item {
+                    var isChecked by remember { mutableStateOf(false) }
+                    SwitchPreference(
                         title = "失重感", checked = isChecked, onCheckedChange = {
                             isChecked = it
                             val modifyValue = (if (it) 0F else 300F)
