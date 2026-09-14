@@ -36,5 +36,5 @@ object NativeFunctions {
     external fun newString(value: String): Long
 
     /** Returns active MonoBehaviour instances as a JSON snapshot. */
-    external fun getEntitySnapshot(): String
+    external fun getEntitySnapshot(coinsOnly: Boolean = false): String
 }

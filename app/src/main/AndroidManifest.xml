@@ -3,18 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name=".App"
-        android:description="@android:string/unknownName"
+        android:name="io.github.libxposed.lovebear.App"
+        android:description="@string/app_description"
         android:label="LoveBear"
         android:theme="@android:style/Theme.DeviceDefault"
         tools:ignore="MissingApplicationIcon">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+
     </application>
 </manifest>

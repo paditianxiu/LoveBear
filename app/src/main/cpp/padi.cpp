@@ -2,9 +2,6 @@
 #include <android/log.h>
 #include <dlfcn.h>
 #include <cstring>
-#include <cmath>
-#include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 #include <link.h>
@@ -25,6 +22,7 @@ namespace {
 #define dlsym ResolveIl2CppSymbol
 
 #include "UnityResolve.hpp"
+#include "EntitySnapshot.hpp"
 
 #undef dlsym
 
@@ -106,22 +104,6 @@ namespace {
     const std::string &FieldType(UnityResolve::Field *field) {
         static const std::string empty;
         return field != nullptr && field->type != nullptr ? field->type->name : empty;
-    }
-
-    std::string JsonEscape(const std::string &value) {
-        std::string escaped;
-        escaped.reserve(value.size() + 8);
-        for (const char character : value) {
-            switch (character) {
-                case '\\': escaped += "\\\\"; break;
-                case '"': escaped += "\\\""; break;
-                case '\n': escaped += "\\n"; break;
-                case '\r': escaped += "\\r"; break;
-                case '\t': escaped += "\\t"; break;
-                default: escaped += character; break;
-            }
-        }
-        return escaped;
     }
 
     jobject
@@ -268,6 +250,7 @@ Java_io_github_libxposed_lovebear_NativeFunctions_initUnityResolve(JNIEnv *, job
         __android_log_write(ANDROID_LOG_WARN, kTag, "Unity runtime is not ready yet");
         return JNI_FALSE;
     }
+    EntitySnapshot::Install();
     __android_log_write(ANDROID_LOG_INFO, kTag, "UnityResolve initialized in Il2Cpp mode");
     return JNI_TRUE;
 }
@@ -446,82 +429,7 @@ Java_io_github_libxposed_lovebear_NativeFunctions_newString(JNIEnv *env, jobject
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_io_github_libxposed_lovebear_NativeFunctions_getEntitySnapshot(JNIEnv *env, jobject) {
-    if (!gInitialized) return env->NewStringUTF("{\"width\":0,\"height\":0,\"entities\":[]}");
-
-    UnityResolve::ThreadAttach();
-    auto *camera = UnityResolve::UnityType::Camera::GetMain();
-    const auto width = UnityResolve::UnityType::Screen::get_width();
-    const auto height = UnityResolve::UnityType::Screen::get_height();
-    std::ostringstream json;
-    json << "{\"width\":" << width << ",\"height\":" << height << ",\"entities\":[";
-
-    bool first = true;
-    if (camera != nullptr && width > 0 && height > 0) {
-        auto *core = UnityResolve::Get("UnityEngine.CoreModule.dll");
-        auto *monoClass = core != nullptr ? core->Get("MonoBehaviour", "UnityEngine") : nullptr;
-        if (monoClass == nullptr && core != nullptr) monoClass = core->Get("MonoBehaviour");
-        if (monoClass != nullptr) {
-            using MonoBehaviour = UnityResolve::UnityType::MonoBehaviour;
-            using MonoBehaviourArray = UnityResolve::UnityType::Array<MonoBehaviour *>;
-
-            std::vector<MonoBehaviour *> objects;
-            auto *objectClass = core->Get("Object", "UnityEngine");
-            if (objectClass == nullptr) objectClass = core->Get("Object");
-            auto *findObjects = objectClass != nullptr
-                                ? objectClass->Get<UnityResolve::Method>(
-                                        "FindObjectsOfType", {"System.Type"})
-                                : nullptr;
-            auto *monoType = monoClass->GetType();
-            if (findObjects != nullptr && monoType != nullptr) {
-                using FindObjectsFunction = MonoBehaviourArray *(*)(void *, void *);
-                auto function = reinterpret_cast<FindObjectsFunction>(findObjects->function);
-                auto *array = function != nullptr
-                              ? function(monoType, findObjects->address)
-                              : nullptr;
-                if (array != nullptr) objects = array->ToVector();
-            }
-
-            for (auto *object : objects) {
-                if (object == nullptr || object->m_CachedPtr == nullptr) continue;
-                auto *gameObject = object->GetGameObject();
-                if (gameObject == nullptr || gameObject->m_CachedPtr == nullptr ||
-                    !gameObject->GetActiveInHierarchy()) continue;
-                auto *transform = object->GetTransform();
-                if (transform == nullptr) continue;
-                const auto screen = camera->WorldToScreenPoint(transform->GetPosition());
-                if (!std::isfinite(screen.x) || !std::isfinite(screen.y) ||
-                    !std::isfinite(screen.z) || screen.z <= 0.0f ||
-                    screen.x < 0.0f || screen.x > static_cast<float>(width) ||
-                    screen.y < 0.0f || screen.y > static_cast<float>(height)) continue;
-
-                // Do not call System.Type methods here: some IL2CPP builds expose
-                // metadata-only MethodInfo entries whose function slot is not executable.
-                std::string type = "UnityEngine.MonoBehaviour";
-                const auto klass = object->Il2CppClass.klass;
-                if (klass != nullptr) {
-                    const auto className = UnityResolve::Invoke<const char *>(
-                            "il2cpp_class_get_name", klass);
-                    const auto namespaceName = UnityResolve::Invoke<const char *>(
-                            "il2cpp_class_get_namespace", klass);
-                    if (className != nullptr && className[0] != '\0') {
-                        type = (namespaceName != nullptr && namespaceName[0] != '\0')
-                               ? std::string(namespaceName) + "." + className
-                               : className;
-                    }
-                }
-                const std::string &name = type;
-
-                if (!first) json << ',';
-                first = false;
-                json << "{\"type\":\"" << JsonEscape(type)
-                     << "\",\"name\":\"" << JsonEscape(name)
-                     << "\",\"x\":" << screen.x
-                     << ",\"y\":" << screen.y
-                     << ",\"z\":" << screen.z << '}';
-            }
-        }
-    }
-    json << "]}";
-    return env->NewStringUTF(json.str().c_str());
+Java_io_github_libxposed_lovebear_NativeFunctions_getEntitySnapshot(JNIEnv *env, jobject,
+                                                                    jboolean coinsOnly) {
+    return EntitySnapshot::Get(env, gInitialized, coinsOnly);
 }
