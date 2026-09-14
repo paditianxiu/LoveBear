@@ -5,13 +5,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.libxposed.lovebear.ModuleMainKt.Companion.TAG
+import io.github.libxposed.lovebear.effect.BgEffectBackground
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -33,7 +38,10 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.highlight.Highlight
+import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -64,6 +72,14 @@ fun MainWindow(onClose: () -> Unit) {
     val items = listOf("Person", "Profile", "Settings")
     val icons = listOf(MiuixIcons.VerticalSplit, MiuixIcons.Contacts, MiuixIcons.Settings)
     val backdrop = rememberLayerBackdrop()
+
+
+    val dynamicBackground = remember { mutableStateOf(isRuntimeShaderSupported()) }
+
+    var isOs3Effect by remember { mutableStateOf(true) }
+    val isFullScreenBackground = remember { mutableStateOf(true) }
+
+
     Card(
         modifier = Modifier
             .background(Color.Transparent)
@@ -102,117 +118,125 @@ fun MainWindow(onClose: () -> Unit) {
                 }
             },
         ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .padding(innerPadding)
+            BgEffectBackground(
+                dynamicBackground = dynamicBackground.value,
+                isOs3Effect = isOs3Effect,
+                isFullSize = isFullScreenBackground.value,
+                modifier = Modifier.fillMaxWidth(),
+                bgModifier = Modifier.layerBackdrop(backdrop),
             ) {
-                item {
-                    SmallTitle("局内功能")
-                }
-                item {
-                    var isChecked by remember { mutableStateOf(false) }
-                    SwitchPreference(
-                        title = "实体坐标绘制", checked = isChecked, onCheckedChange = {
-                            isChecked = it
-                            EntityOverlayController.setEnabled(it)
-                        })
-                }
-                item {
-                    var isChecked by remember { mutableStateOf(false) }
-                    SwitchPreference(
-                        title = "正确路线", checked = isChecked, onCheckedChange = {
-                            isChecked = it
-                            EntityOverlayController.setCorrectRouteEnabled(it)
-                        })
-                }
-                item {
-                    var isChecked by remember { mutableStateOf(false) }
-                    SwitchPreference(
-                        title = "失重感", checked = isChecked, onCheckedChange = {
-                            isChecked = it
-                            val modifyValue = (if (it) 0F else 300F)
-                            val playerControlClass = Il2Cpp.getClass(
-                                assembly = "Assembly-CSharp.dll",
-                                namespace = "",
-                                className = "PlayerControl"
-                            ) ?: run {
-                                return@SwitchPreference
-                            }
-                            val self = playerControlClass.getStaticObject("self")
-                            if (self == 0L) {
-                                return@SwitchPreference
-                            }
-                            if (!playerControlClass.set(self, "gravity", modifyValue)) {
-                                return@SwitchPreference
-                            }
-                        })
-                }
-
-                item {
-                    var isChecked by remember { mutableStateOf(false) }
-                    SwitchPreference(
-                        title = "角色无敌", checked = isChecked, onCheckedChange = {
-                            isChecked = it
-                            val modifyValue = (if (it) 2.1474836E9F else 0F)
-                            val playerControlClass = Il2Cpp.getClass(
-                                assembly = "Assembly-CSharp.dll",
-                                namespace = "",
-                                className = "PlayerControl"
-                            ) ?: run {
-                                return@SwitchPreference
-                            }
-                            val self = playerControlClass.getStaticObject("self")
-                            playerControlClass.set(self, "invincible", isChecked)
-                            playerControlClass.set(self, "invincibleTime", modifyValue)
-
-                        })
-                }
-
-                item {
-                    Spacer(Modifier.height(4.dp))
-                    HorizontalDivider()
-                    Spacer(Modifier.height(4.dp))
-                }
-
-                item {
-                    Row {
-                        Button(
-                            modifier = Modifier.weight(1F), onClick = {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .padding(innerPadding)
+                ) {
+                    item {
+                        SmallTitle("局内功能")
+                    }
+                    item {
+                        var isChecked by remember { mutableStateOf(false) }
+                        SwitchPreference(
+                            title = "实体坐标绘制", checked = isChecked, onCheckedChange = {
+                                isChecked = it
+                                EntityOverlayController.setEnabled(it)
+                            })
+                    }
+                    item {
+                        var isChecked by remember { mutableStateOf(false) }
+                        SwitchPreference(
+                            title = "正确路线", checked = isChecked, onCheckedChange = {
+                                isChecked = it
+                                EntityOverlayController.setCorrectRouteEnabled(it)
+                            })
+                    }
+                    item {
+                        var isChecked by remember { mutableStateOf(false) }
+                        SwitchPreference(
+                            title = "失重感", checked = isChecked, onCheckedChange = {
+                                isChecked = it
+                                val modifyValue = (if (it) 0F else 300F)
                                 val playerControlClass = Il2Cpp.getClass(
                                     assembly = "Assembly-CSharp.dll",
                                     namespace = "",
                                     className = "PlayerControl"
                                 ) ?: run {
-                                    return@Button
+                                    return@SwitchPreference
                                 }
                                 val self = playerControlClass.getStaticObject("self")
-                                if (!playerControlClass.set(self, "coin", 114514191)) {
-                                    return@Button
+                                if (self == 0L) {
+                                    return@SwitchPreference
                                 }
-                            }, colors = ButtonDefaults.buttonColorsPrimary()
-                        ) {
-                            Text("大量金币")
-                        }
+                                if (!playerControlClass.set(self, "gravity", modifyValue)) {
+                                    return@SwitchPreference
+                                }
+                            })
+                    }
 
-                        Spacer(Modifier.width(8.dp))
-
-                        Button(
-                            modifier = Modifier.weight(1F), onClick = {
+                    item {
+                        var isChecked by remember { mutableStateOf(false) }
+                        SwitchPreference(
+                            title = "角色无敌", checked = isChecked, onCheckedChange = {
+                                isChecked = it
+                                val modifyValue = (if (it) 2.1474836E9F else 0F)
                                 val playerControlClass = Il2Cpp.getClass(
                                     assembly = "Assembly-CSharp.dll",
                                     namespace = "",
                                     className = "PlayerControl"
                                 ) ?: run {
-                                    return@Button
+                                    return@SwitchPreference
                                 }
                                 val self = playerControlClass.getStaticObject("self")
-                                if (!playerControlClass.set(self, "score", 114514191)) {
-                                    return@Button
-                                }
-                            }, colors = ButtonDefaults.buttonColorsPrimary()
-                        ) {
-                            Text("大量分数")
+                                playerControlClass.set(self, "invincible", isChecked)
+                                playerControlClass.set(self, "invincibleTime", modifyValue)
+
+                            })
+                    }
+
+                    item {
+                        Spacer(Modifier.height(4.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(4.dp))
+                    }
+
+                    item {
+                        Row {
+                            Button(
+                                modifier = Modifier.weight(1F), onClick = {
+                                    val playerControlClass = Il2Cpp.getClass(
+                                        assembly = "Assembly-CSharp.dll",
+                                        namespace = "",
+                                        className = "PlayerControl"
+                                    ) ?: run {
+                                        return@Button
+                                    }
+                                    val self = playerControlClass.getStaticObject("self")
+                                    if (!playerControlClass.set(self, "coin", 114514191)) {
+                                        return@Button
+                                    }
+                                }, colors = ButtonDefaults.buttonColorsPrimary()
+                            ) {
+                                Text("大量金币")
+                            }
+
+                            Spacer(Modifier.width(8.dp))
+
+                            Button(
+                                modifier = Modifier.weight(1F), onClick = {
+                                    val playerControlClass = Il2Cpp.getClass(
+                                        assembly = "Assembly-CSharp.dll",
+                                        namespace = "",
+                                        className = "PlayerControl"
+                                    ) ?: run {
+                                        return@Button
+                                    }
+                                    val self = playerControlClass.getStaticObject("self")
+                                    if (!playerControlClass.set(self, "score", 114514191)) {
+                                        return@Button
+                                    }
+                                }, colors = ButtonDefaults.buttonColorsPrimary()
+                            ) {
+                                Text("大量分数")
+                            }
                         }
                     }
                 }
@@ -220,6 +244,6 @@ fun MainWindow(onClose: () -> Unit) {
 
         }
     }
-
-
 }
+
+
